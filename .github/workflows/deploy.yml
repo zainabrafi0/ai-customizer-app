@@ -6,7 +6,7 @@ on:
     branches: [ main ]
 
 env:
-  AWS_REGION: us-east-1 # Change this if your AWS region is different
+  AWS_REGION: ap-southeast-1 
   ECR_BACKEND_REPO: ai-platform-backend
   ECR_FRONTEND_REPO: ai-platform-frontend
 

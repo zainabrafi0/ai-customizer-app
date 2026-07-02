@@ -1,0 +1,56 @@
+name: Deploy to AWS ECR
+
+# This triggers the pipeline whenever you push to the 'main' branch
+on:
+  push:
+    branches: [ main ]
+
+env:
+  AWS_REGION: us-east-1 # Change this if your AWS region is different
+  ECR_BACKEND_REPO: ai-platform-backend
+  ECR_FRONTEND_REPO: ai-platform-frontend
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Get the code from your GitHub repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 2. Log into AWS using your secure GitHub Secrets
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 3. Log into the AWS Elastic Container Registry (ECR)
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # 4. Build and Push the Backend Image
+      - name: Build, tag, and push Backend Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }} # Uses the unique git commit hash as the tag
+        run: |
+          echo "Building Backend..."
+          docker build -t $ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_BACKEND_REPO:latest ./backend
+          echo "Pushing Backend..."
+          docker push $ECR_REGISTRY/$ECR_BACKEND_REPO --all-tags
+
+      # 5. Build and Push the Frontend Image
+      - name: Build, tag, and push Frontend Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "Building Frontend..."
+          docker build -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest ./frontend
+          echo "Pushing Frontend..."
+          docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO --all-tags
